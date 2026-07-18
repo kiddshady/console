@@ -1,0 +1,144 @@
+/* Strop — the neon design tokens behind Console. Dark, high-contrast, two-voiced.
+   Extracted from the hand-written accent that recurred across styles.css. */
+
+:root {
+  /* ── identity ───────────────────────────────────────────────────────────────
+     Two voices, not seven colours. --st-accent is the tool itself: brand, primary
+     action, focus, links, activity. --st-accent-alt is the *other* voice living
+     inside the app — a region that speaks with the alternate voice re-tints itself
+     (see "the tint layer"), and that shift is a semantic event, never decoration. */
+  --st-accent:     #00fff5;
+  --st-accent-alt: #ff00aa;
+
+  /* ── status — colour for state, never for ornament ── */
+  --st-danger:  #ff0044;
+  --st-success: #00ff88;
+  --st-warning: #ffee00;
+
+  /* Console spends this hue on notable tokens inside prose — a git branch, a
+     highlighted identifier — rather than on warnings proper. Same hue, two jobs;
+     the alias exists so call sites read honestly. */
+  --st-highlight: var(--st-warning);
+
+  /* ── syntax — the only place colour is allowed to mean "kind of token" ── */
+  --st-syntax-keyword: #aa00ff;
+  --st-syntax-fn:      var(--st-accent);
+  --st-syntax-obj:     var(--st-text);
+
+  /* ── surfaces ───────────────────────────────────────────────────────────────
+     An elevation ladder with a basement. Chrome is carved DOWN into --st-bg-deep
+     (titlebar, status bar, code blocks, inline code); the app body rests on
+     --st-bg; panels and rails rise to --st-bg-panel; anything that floats free
+     of the layout — palette, toast, dropdowns, avatars — rises highest. */
+  --st-bg-deep:     #050507;
+  --st-bg:          #0a0a0f;
+  --st-bg-panel:    #0f0f17;
+  --st-bg-elevated: #14141f;
+
+  --st-bg-hover:  #1a1a28;
+  --st-bg-active: #20203a;
+  --st-bg-input:  var(--st-bg);
+
+  /* The one neutral edge in the system — inputs, ghost buttons, segmented
+     controls. Every other border is the tint at low alpha. Coincides with
+     --st-bg-active today; named apart so the two can diverge later. */
+  --st-edge: #20203a;
+
+  /* ── text — four steps, and the neutrals carry a violet cast ── */
+  --st-text:       #e0e0f0;
+  --st-text-dim:   #8888aa;
+  --st-text-faint: #555577;
+  --st-text-ghost: #33334a;
+
+  /* what sits on top of a filled accent / danger surface */
+  --st-on-accent: var(--st-bg-deep);
+  --st-on-danger: #ffffff;
+
+  /* ── type — the machine speaks mono, the human reads sans ─────────────────── */
+  --st-mono: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', ui-monospace, 'SF Mono', Menlo, monospace;
+  --st-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+  /* micro-labels are uppercase mono with the tracking opened up */
+  --st-track-label: 0.16em;
+  --st-track-title: 0.06em;
+  --st-track-brand: 0.34em;
+
+  /* ── metrics ── */
+  --st-titlebar-h:  38px;
+  --st-statusbar-h: 26px;
+  --st-sidebar-w:   52px;
+
+  --st-radius-sm: 4px;
+  --st-radius-md: 6px;
+  --st-radius-lg: 8px;
+  --st-radius-xl: 10px;
+
+  /* the 2px left rail that carries status on bubbles, chips, toasts, code blocks */
+  --st-rail: 2px;
+
+  /* ── depth — a black drop for distance, a tinted halo for presence ── */
+  --st-shadow-pop:   0 2px 10px rgba(0, 0, 0, 0.35);
+  --st-shadow-float: 0 14px 36px rgba(0, 0, 0, 0.55);
+  --st-shadow-modal: 0 20px 60px rgba(0, 0, 0, 0.6);
+
+  /* ── motion — entrances settle softly, exits leave a touch quicker ── */
+  --st-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --st-ease-in:  cubic-bezier(0.4, 0, 0.6, 1);
+
+  --st-dur-1: 0.12s;
+  --st-dur-2: 0.15s;
+  --st-dur-3: 0.18s;
+  --st-dur-4: 0.22s;
+  --st-dur-5: 0.28s;
+
+  /* the ambient voice; regions override this and re-derive (below) */
+  --st-tint: var(--st-accent);
+}
+
+/* ── the tint layer ───────────────────────────────────────────────────────────
+   Everything here derives from --st-tint. It lives in its own rule for a reason.
+
+   CSS resolves a var() inside a custom property at the element where that property
+   is DECLARED, not where it is used. So a region cannot merely set --st-tint and
+   expect the borders and glows to follow — the derivations have to be re-declared
+   on that same element. That is the entire job of the .st-tint class:
+
+     <aside class="st-tint st-tint-alt"> …magenta borders, magenta glow… </aside>
+
+   Measured on Chromium 130 / Electron 33.4: set --st-tint alone and the glow stays
+   stubbornly cyan; add the class and it turns.
+   ─────────────────────────────────────────────────────────────────────────── */
+:root,
+.st-tint {
+  --st-border-subtle: color-mix(in srgb, var(--st-tint) 7%,  transparent);
+  --st-border-soft:   color-mix(in srgb, var(--st-tint) 12%, transparent);
+  --st-border-strong: color-mix(in srgb, var(--st-tint) 28%, transparent);
+  /* a ring that should read as present, not structural — an avatar, a live chip */
+  --st-border-vivid:  color-mix(in srgb, var(--st-tint) 40%, transparent);
+
+  /* the faintest possible fill: hovering a control that is already tinted
+     (a segmented button, a combobox toggle) rather than a neutral one */
+  --st-wash: color-mix(in srgb, var(--st-tint) 6%, transparent);
+
+  /* glow is a state, not an ornament: every lit surface rests at --st-glow and
+     brightens to --st-glow-lg on hover. Three mechanisms, one idea — box-shadow
+     for filled surfaces, text-shadow for type, drop-shadow() for SVG. */
+  --st-glow-sm:   0 0 8px  color-mix(in srgb, var(--st-tint) 35%, transparent);
+  --st-glow:      0 0 12px color-mix(in srgb, var(--st-tint) 30%, transparent);
+  --st-glow-lg:   0 0 20px color-mix(in srgb, var(--st-tint) 50%, transparent);
+  --st-glow-text: 0 0 10px color-mix(in srgb, var(--st-tint) 45%, transparent);
+  --st-glow-icon: drop-shadow(0 0 6px color-mix(in srgb, var(--st-tint) 50%, transparent));
+
+  /* the halo a floating surface casts in its own colour, under the black drop */
+  --st-halo:      0 0 22px color-mix(in srgb, var(--st-tint) 14%, transparent);
+  --st-halo-wide: 0 0 40px color-mix(in srgb, var(--st-tint) 8%,  transparent);
+
+  --st-selection: color-mix(in srgb, var(--st-tint) 22%, transparent);
+  --st-grid-line: color-mix(in srgb, var(--st-tint) 3%,  transparent);
+}
+
+/* Pair one of these with .st-tint on the same element. */
+.st-tint-accent  { --st-tint: var(--st-accent); }
+.st-tint-alt     { --st-tint: var(--st-accent-alt); }
+.st-tint-danger  { --st-tint: var(--st-danger); }
+.st-tint-success { --st-tint: var(--st-success); }

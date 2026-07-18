@@ -1,0 +1,75 @@
+/* Console — fuentes vendoreadas (bundle local).
+   Antes venían de Google Fonts (remoto), lo que causaba dos problemas: (1) la app
+   dependía de la red para tener su tipografía, y (2) un race al arrancar — la shell 1
+   se creaba y xterm medía su glyph con la fuente fallback (Cascadia Code) ANTES de que
+   bajara JetBrains Mono, dejando el prompt/cursor unos px corrido respecto del resto de
+   las shells. Ahora las caras están acá al lado (y disponibles offline); el renderer
+   además espera document.fonts antes de crear la primera shell y re-mide si hiciera falta.
+   Licencias: fonts/OFL-JetBrainsMono.txt y fonts/OFL-Inter.txt (ambas SIL OFL 1.1). */
+
+/* ── JetBrains Mono — la voz de la máquina (terminal + mono de la UI) ── */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('fonts/jetbrains-mono-400.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('fonts/jetbrains-mono-500.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('fonts/jetbrains-mono-600.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('fonts/jetbrains-mono-700.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url('fonts/jetbrains-mono-400-italic.woff2') format('woff2');
+}
+
+/* ── Inter — la voz del humano (sans de la UI) ── */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('fonts/inter-400.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('fonts/inter-500.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('fonts/inter-600.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('fonts/inter-700.woff2') format('woff2');
+}

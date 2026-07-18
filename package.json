@@ -1,0 +1,83 @@
+{
+  "name": "console",
+  "version": "0.1.0",
+  "description": "Console — Terminal con estética cyberpunk · Umbrovex Systems",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "dist": "electron-builder --win",
+    "dist:portable": "electron-builder --win portable",
+    "dist:nsis": "electron-builder --win nsis",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "build": {
+    "appId": "com.umbrovex.console",
+    "productName": "Console",
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "kiddshady",
+        "repo": "console"
+      }
+    ],
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "src/**/*",
+      "node_modules/**/*",
+      "package.json",
+      "!node_modules/**/{CHANGELOG.md,README.md,readme.md,*.d.ts,*.map,*.ts}",
+      "!node_modules/**/{test,tests,__tests__,docs,doc,examples,example}/**"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "artifactName": "${productName}-Setup-${version}.${ext}",
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Console"
+    },
+    "portable": {
+      "artifactName": "Console-${version}-portable.exe"
+    }
+  },
+  "keywords": [
+    "terminal",
+    "electron",
+    "cyberpunk"
+  ],
+  "author": "Umbrovex Systems",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "40.10.2",
+    "electron-builder": "^25.1.8"
+  },
+  "dependencies": {
+    "@xterm/addon-fit": "^0.10.0",
+    "@xterm/addon-web-links": "^0.11.0",
+    "@xterm/addon-webgl": "^0.18.0",
+    "@xterm/xterm": "^5.5.0",
+    "electron-updater": "^6.8.9",
+    "node-pty": "^1.2.0-beta.14"
+  }
+}

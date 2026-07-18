@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<meta name="design_doc_mode" content="canvas">
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#050507;font-family:'Inter',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:#00fff5;text-decoration:none}
+a:hover{color:#66fffb}
+::selection{background:rgba(0,255,245,.22)}
+textarea:focus,input:focus{outline:none}
+@keyframes blink{0%,49%{opacity:1}50%,100%{opacity:0}}
+@keyframes glowpulse{0%,100%{box-shadow:inset 0 2px 0 #00fff5,0 0 12px rgba(0,255,245,.28)}50%{box-shadow:inset 0 2px 0 #00fff5,0 0 20px rgba(0,255,245,.5)}}
+@keyframes errpulse{0%,100%{transform:scale(1);opacity:.85}50%{transform:scale(1.35);opacity:1}}
+@keyframes bounce{0%,60%,100%{transform:translateY(0);opacity:.35}30%{transform:translateY(-5px);opacity:1}}
+@keyframes slideup{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes scalein{from{transform:scale(.965);opacity:0}to{transform:scale(1);opacity:1}}
+@keyframes softpulse{0%,100%{opacity:.5}50%{opacity:.9}}
+.scroll::-webkit-scrollbar{width:8px;height:8px}
+.scroll::-webkit-scrollbar-thumb{background:rgba(0,255,245,.28);border-radius:4px}
+.scroll::-webkit-scrollbar-thumb:hover{background:rgba(0,255,245,.6)}
+.scroll::-webkit-scrollbar-track{background:transparent}
+</style>
+</helmet>
+
+<section style="min-height:100vh;padding:64px 72px 120px;background:radial-gradient(1200px 700px at 20% -10%,rgba(0,255,245,.05),transparent 60%),radial-gradient(1000px 600px at 100% 110%,rgba(255,0,170,.045),transparent 55%),#050507">
+  <div style="display:flex;align-items:baseline;gap:18px;margin-bottom:6px">
+    <div style="font-family:'JetBrains Mono',monospace;font-weight:700;font-size:30px;letter-spacing:.42em;color:#00fff5;text-shadow:0 0 18px rgba(0,255,245,.45)">RAZOR</div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.28em;color:#555577;text-transform:uppercase">Terminal · AI Embebido · Neon Razor</div>
+  </div>
+  <div style="font-family:'Inter',sans-serif;font-size:14px;color:#8888aa;max-width:720px;line-height:1.6;margin-bottom:44px">Vista principal + 2 variaciones de layout. <span style="color:#e0e0f0">1a es interactivo</span> — cambiá de tab, escribile al agente, o abrí el command palette con <span style="font-family:'JetBrains Mono',monospace;color:#00fff5">Ctrl</span>+<span style="font-family:'JetBrains Mono',monospace;color:#00fff5">Shift</span>+<span style="font-family:'JetBrains Mono',monospace;color:#00fff5">P</span>.</div>
+
+  <div style="display:flex;flex-wrap:wrap;gap:64px;align-items:flex-start">
+
+    <!-- ========================= 1a ========================= -->
+    <div id="1a" style="display:flex;flex-direction:column;gap:16px;scroll-margin:80px">
+      <div style="display:flex;align-items:center;gap:14px">
+        <div style="font-family:'JetBrains Mono',monospace;font-weight:700;font-size:13px;color:#050507;background:#00fff5;padding:4px 11px;border-radius:4px;box-shadow:0 0 14px rgba(0,255,245,.5)">1a</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:14px;color:#e0e0f0;letter-spacing:.02em">Classic · sidebar + terminal + AI panel</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#00ff88;border:1px solid rgba(0,255,136,.35);padding:2px 9px;border-radius:100px;letter-spacing:.14em;text-transform:uppercase">interactivo</div>
+      </div>
+
+      <div style="width:1380px;height:848px;background:#0a0a0f;border:1px solid rgba(0,255,245,.14);border-radius:11px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 40px 100px rgba(0,0,0,.65),0 0 0 1px rgba(0,0,0,.6),0 0 60px rgba(0,255,245,.05)">
+
+        <!-- TITLEBAR -->
+        <div style="height:38px;flex:none;background:#050507;border-bottom:1px solid rgba(0,255,245,.1);display:flex;align-items:stretch;padding-left:14px;gap:2px">
+          <div style="display:flex;align-items:center;gap:9px;padding-right:14px">
+            <span style="font-family:'JetBrains Mono',monospace;font-weight:700;font-size:14px;letter-spacing:.34em;color:#00fff5;text-shadow:0 0 10px rgba(0,255,245,.45)">RAZOR</span>
+          </div>
+          <!-- tabs -->
+          <div style="display:flex;align-items:flex-end;gap:2px;flex:1;min-width:0">
+            <sc-for list="{{ tabs }}" as="tab" hint-placeholder-count="3">
+              <div onClick="{{ tab.select }}" title="{{ tab.name }}" style="display:flex;align-items:center;gap:8px;min-width:132px;max-width:210px;height:100%;padding:0 12px;cursor:pointer;position:relative;background:{{ tab.bg }};border-top:2px solid {{ tab.bt }};animation:{{ tab.anim }}">
+                <sc-if value="{{ tab.error }}" hint-placeholder-val="{{ true }}"><span style="width:7px;height:7px;border-radius:50%;background:#ff0044;box-shadow:0 0 8px rgba(255,0,68,.8);animation:errpulse 1.1s ease-in-out infinite;flex:none"></span></sc-if>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="{{ tab.fg }}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
+                <span style="font-family:'JetBrains Mono',monospace;font-size:12.5px;color:{{ tab.fg }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1">{{ tab.name }}</span>
+                <span style="color:#555577;display:flex" style-hover="color:#ff0044"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></span>
+              </div>
+            </sc-for>
+            <div style="display:flex;align-items:center;justify-content:center;width:30px;height:100%;color:#555577;cursor:pointer" style-hover="color:#00fff5">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            </div>
+          </div>
+          <!-- window controls -->
+          <div style="display:flex;align-items:stretch">
+            <div style="width:44px;display:flex;align-items:center;justify-content:center;color:#8888aa;cursor:pointer" style-hover="background:#1a1a28;color:#e0e0f0"><svg width="13" height="13" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.6"><line x1="5" y1="12" x2="19" y2="12"></line></svg></div>
+            <div style="width:44px;display:flex;align-items:center;justify-content:center;color:#8888aa;cursor:pointer" style-hover="background:#1a1a28;color:#e0e0f0"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="16" rx="1"></rect></svg></div>
+            <div style="width:44px;display:flex;align-items:center;justify-content:center;color:#8888aa;cursor:pointer" style-hover="background:#ff0044;color:#fff"><svg width="13" height="13" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></div>
+          </div>
+        </div>
+
+        <!-- BODY: sidebar | main | ai -->
+        <div style="flex:1;display:flex;min-height:0">
+
+          <!-- SIDEBAR -->
+          <div style="width:52px;flex:none;background:#0f0f17;border-right:1px solid rgba(0,255,245,.07);display:flex;flex-direction:column;align-items:center;padding:12px 0;gap:6px">
+            <div title="Sessions" style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:6px;color:#00fff5;background:#20203a;cursor:pointer;box-shadow:inset 2px 0 0 #00fff5"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg></div>
+            <div title="Snippets" style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:6px;color:#8888aa;cursor:pointer" style-hover="color:#00fff5;background:#1a1a28"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg></div>
+            <div title="History" style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:6px;color:#8888aa;cursor:pointer" style-hover="color:#00fff5;background:#1a1a28"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v5h5"></path><path d="M3.05 13A9 9 0 106 5.3L3 8"></path><path d="M12 7v5l4 2"></path></svg></div>
+            <div title="Themes" style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:6px;color:#8888aa;cursor:pointer" style-hover="color:#00fff5;background:#1a1a28"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".8"></circle><circle cx="17.5" cy="10.5" r=".8"></circle><circle cx="8.5" cy="7.5" r=".8"></circle><circle cx="6.5" cy="12.5" r=".8"></circle><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.9 0 1.5-.7 1.5-1.5 0-.4-.2-.8-.4-1.1-.3-.4-.4-.7-.4-1.1 0-.8.7-1.5 1.5-1.5H16c3.3 0 6-2.7 6-6 0-4.9-4.5-9-10-9z"></path></svg></div>
+            <div style="flex:1"></div>
+            <div title="Settings" onClick="{{ togglePalette }}" style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:6px;color:#8888aa;cursor:pointer" style-hover="color:#00fff5;background:#1a1a28"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"></path></svg></div>
+          </div>
+
+          <!-- MAIN COLUMN -->
+          <div style="flex:1;display:flex;flex-direction:column;min-width:0;position:relative">
+            <!-- terminal -->
+            <div class="scroll" style="flex:1;overflow:auto;padding:14px 18px;background-color:#0a0a0f;background-image:linear-gradient(rgba(0,255,245,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,255,245,.03) 1px,transparent 1px);background-size:34px 34px;font-family:'JetBrains Mono',monospace;font-size:14px;line-height:1.5;position:relative">
+              <sc-for list="{{ activeLines }}" as="line" hint-placeholder-count="8">
+                <div style="min-height:21px;white-space:pre-wrap;word-break:break-word"><sc-for list="{{ line.segs }}" as="seg"><span style="color:{{ seg.c }};text-shadow:{{ seg.s }};font-weight:{{ seg.w }}">{{ seg.x }}</span></sc-for></div>
+              </sc-for>
+              <sc-if value="{{ showEmpty }}" hint-placeholder-val="{{ false }}">
+                <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:#33334a;pointer-events:none">
+                  <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="#20203a" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
+                  <div style="font-family:'JetBrains Mono',monospace;font-size:13px;color:#555577">Sesión limpia. Escribí un comando o abrí una nueva tab con <span style="color:#00fff5">Ctrl+T</span></div>
+                </div>
+              </sc-if>
+            </div>
+
+            <!-- BOTTOM BAR (error / suggestion) -->
+            <sc-if value="{{ bottomVisible }}" hint-placeholder-val="{{ true }}">
+              <div style="flex:none;background:#14141f;border-top:2px solid #ff0044;padding:13px 16px;display:flex;gap:13px;align-items:flex-start;animation:slideup .22s ease-out;box-shadow:0 -8px 24px rgba(255,0,68,.12)">
+                <div style="flex:none;color:#ff0044;margin-top:1px;filter:drop-shadow(0 0 6px rgba(255,0,68,.5))"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg></div>
+                <div style="flex:1;min-width:0">
+                  <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px"><span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#ff0044">Error detectado</span><span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#8888aa">TS2345 · loop.ts:84</span></div>
+                  <div style="font-family:'Inter',sans-serif;font-size:13.5px;color:#e0e0f0;margin-bottom:9px"><span style="font-family:'JetBrains Mono',monospace;color:#ffee00">payload.command</span> puede ser <span style="font-family:'JetBrains Mono',monospace;color:#ffee00">undefined</span> pero <span style="font-family:'JetBrains Mono',monospace;color:#ffee00">dispatch()</span> espera un string. Fix propuesto:</div>
+                  <div style="font-family:'JetBrains Mono',monospace;font-size:12.5px;background:#0a0a0f;border:1px solid rgba(0,255,245,.12);border-radius:4px;padding:9px 12px;color:#8888aa;white-space:pre"><span style="color:#aa00ff">if</span> (!payload.command) <span style="color:#aa00ff">return</span>
+<span style="color:#00fff5">await</span> <span style="color:#e0e0f0">this</span>.dispatch(payload.command)</div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:8px;flex:none">
+                  <div onClick="{{ applyFix }}" style="font-family:'JetBrains Mono',monospace;font-size:12.5px;font-weight:600;color:#050507;background:#00fff5;padding:8px 18px;border-radius:2px;cursor:pointer;text-align:center;box-shadow:0 0 14px rgba(0,255,245,.4)" style-hover="box-shadow:0 0 22px rgba(0,255,245,.7)">Apply</div>
+                  <div onClick="{{ closeBottom }}" style="font-family:'JetBrains Mono',monospace;font-size:12.5px;color:#8888aa;padding:8px 18px;border:1px solid #20203a;border-radius:2px;cursor:pointer;text-align:center" style-hover="color:#e0e0f0;border-color:#33334a">Dismiss</div>
+                </div>
+              </div>
+            </sc-if>
+
+            <!-- STATUS BAR -->
+            <div style="height:26px;flex:none;background:#050507;border-top:1px solid rgba(0,255,245,.06);display:flex;align-items:center;padding:0 12px;gap:16px;font-family:'JetBrains Mono',monospace;font-size:11.5px">
+              <div style="display:flex;align-items:center;gap:6px;color:#8888aa"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"></path></svg><span style="color:#e0e0f0">{{ cwd }}</span></div>
+              <div style="display:flex;align-items:center;gap:6px;color:{{ gitColor }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="3" x2="6" y2="15"></line><circle cx="18" cy="6" r="3"></circle><circle cx="6" cy="18" r="3"></circle><path d="M18 9a9 9 0 01-9 9"></path></svg><span>{{ branch }}</span><span style="color:#555577">{{ gitStatus }}</span></div>
+              <div style="flex:1"></div>
+              <div style="color:#8888aa">{{ shell }}</div>
+              <div style="display:flex;align-items:center;gap:5px;color:#555577"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><polyline points="12 8 12 12 15 14"></polyline></svg><span>{{ elapsed }}</span></div>
+              <div style="display:flex;align-items:center;gap:5px"><span style="color:#555577">exit</span><span style="color:{{ exitColor }};text-shadow:{{ exitGlow }};font-weight:600">{{ exit }}</span></div>
+            </div>
+          </div>
+
+          <!-- AI PANEL -->
+          <div style="width:{{ aiWidth }};flex:none;background:#0f0f17;border-left:1px solid rgba(0,255,245,.1);display:flex;flex-direction:column;min-height:0;overflow:hidden;transition:width .2s ease-out">
+            <!-- header -->
+            <div style="flex:none;padding:12px 14px 10px;border-bottom:1px solid rgba(0,255,245,.06)">
+              <div style="display:flex;align-items:center;gap:9px;margin-bottom:11px">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#ff00aa" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="filter:drop-shadow(0 0 5px rgba(255,0,170,.5))"><rect x="4" y="4" width="16" height="16" rx="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line></svg>
+                <span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;color:#e0e0f0;letter-spacing:.06em;flex:1">AI Assistant</span>
+                <span style="width:6px;height:6px;border-radius:50%;background:#00ff88;box-shadow:0 0 7px rgba(0,255,136,.8);animation:softpulse 2s ease-in-out infinite"></span>
+              </div>
+              <div style="display:flex;gap:0;background:#0a0a0f;border:1px solid #20203a;border-radius:5px;padding:2px">
+                <div onClick="{{ setChat }}" style="flex:1;text-align:center;font-family:'JetBrains Mono',monospace;font-size:11.5px;padding:5px 0;border-radius:3px;cursor:pointer;background:{{ chatBg }};color:{{ chatFg }}">Chat</div>
+                <div onClick="{{ setSuggest }}" style="flex:1;text-align:center;font-family:'JetBrains Mono',monospace;font-size:11.5px;padding:5px 0;border-radius:3px;cursor:pointer;background:{{ suggestBg }};color:{{ suggestFg }}">Suggest</div>
+                <div onClick="{{ setContext }}" style="flex:1;text-align:center;font-family:'JetBrains Mono',monospace;font-size:11.5px;padding:5px 0;border-radius:3px;cursor:pointer;background:{{ contextBg }};color:{{ contextFg }}">Context</div>
+              </div>
+            </div>
+
+            <!-- CHAT MODE -->
+            <sc-if value="{{ chatActive }}" hint-placeholder-val="{{ true }}">
+              <div class="scroll" style="flex:1;overflow:auto;padding:14px;display:flex;flex-direction:column;gap:14px">
+                <sc-for list="{{ messages }}" as="m" hint-placeholder-count="3">
+                  <sc-if value="{{ m.isAi }}" hint-placeholder-val="{{ true }}">
+                    <div style="display:flex;gap:9px;align-items:flex-start;animation:scalein .2s ease-out">
+                      <div style="width:24px;height:24px;flex:none;border-radius:50%;background:#14141f;border:1px solid rgba(255,0,170,.4);display:flex;align-items:center;justify-content:center;color:#ff00aa"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="16" height="16" rx="2"></rect><rect x="9" y="9" width="6" height="6"></rect></svg></div>
+                      <div style="flex:1;background:#0a0a0f;border-left:2px solid #ff00aa;border-radius:0 6px 6px 0;padding:9px 11px">
+                        <div style="font-family:'Inter',sans-serif;font-size:13px;line-height:1.55;color:#e0e0f0">{{ m.text }}</div>
+                        <sc-if value="{{ m.hasCode }}" hint-placeholder-val="{{ false }}"><div style="margin-top:8px;font-family:'JetBrains Mono',monospace;font-size:12px;background:#050507;border:1px solid rgba(0,255,245,.12);border-radius:4px;padding:8px 10px;color:#00ff88;white-space:pre-wrap">{{ m.code }}</div></sc-if>
+                      </div>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ m.isUser }}" hint-placeholder-val="{{ false }}">
+                    <div style="display:flex;gap:9px;align-items:flex-start;flex-direction:row-reverse;animation:scalein .2s ease-out">
+                      <div style="width:24px;height:24px;flex:none;border-radius:50%;background:#14141f;border:1px solid rgba(0,255,245,.4);display:flex;align-items:center;justify-content:center;color:#00fff5"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></div>
+                      <div style="max-width:80%;background:#14141f;border-right:2px solid #00fff5;border-radius:6px 0 0 6px;padding:9px 11px"><div style="font-family:'Inter',sans-serif;font-size:13px;line-height:1.55;color:#e0e0f0">{{ m.text }}</div></div>
+                    </div>
+                  </sc-if>
+                </sc-for>
+                <sc-if value="{{ aiTyping }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;gap:9px;align-items:center">
+                    <div style="width:24px;height:24px;flex:none;border-radius:50%;background:#14141f;border:1px solid rgba(255,0,170,.4);display:flex;align-items:center;justify-content:center;color:#ff00aa"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="16" height="16" rx="2"></rect><rect x="9" y="9" width="6" height="6"></rect></svg></div>
+                    <div style="display:flex;gap:5px;padding:10px 12px;background:#0a0a0f;border-radius:0 6px 6px 0;border-left:2px solid #ff00aa">
+                      <span style="width:6px;height:6px;border-radius:50%;background:#00fff5;animation:bounce 1.2s infinite"></span>
+                      <span style="width:6px;height:6px;border-radius:50%;background:#00fff5;animation:bounce 1.2s infinite .15s"></span>
+                      <span style="width:6px;height:6px;border-radius:50%;background:#00fff5;animation:bounce 1.2s infinite .3s"></span>
+                    </div>
+                  </div>
+                </sc-if>
+              </div>
+              <div style="flex:none;padding:11px 12px;border-top:1px solid rgba(0,255,245,.06)">
+                <div style="background:#0a0a0f;border:1px solid #20203a;border-radius:7px;padding:8px 10px;display:flex;align-items:flex-end;gap:8px" style-focus-within="border-color:rgba(0,255,245,.5)">
+                  <textarea value="{{ draft }}" onChange="{{ onDraft }}" onKeyDown="{{ onKey }}" placeholder="Preguntá sobre el terminal…  ↵ enviar" rows="1" style="flex:1;background:transparent;border:none;resize:none;color:#e0e0f0;font-family:'Inter',sans-serif;font-size:13px;line-height:1.5;max-height:80px"></textarea>
+                  <div onClick="{{ send }}" style="flex:none;width:30px;height:30px;border-radius:6px;background:#00fff5;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#050507;box-shadow:0 0 12px rgba(0,255,245,.4)" style-hover="box-shadow:0 0 20px rgba(0,255,245,.7)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg></div>
+                </div>
+                <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#33334a;margin-top:6px;padding-left:2px">GLM-5.2 · lee cwd, git y último output</div>
+              </div>
+            </sc-if>
+
+            <!-- SUGGESTIONS MODE -->
+            <sc-if value="{{ suggestActive }}" hint-placeholder-val="{{ false }}">
+              <div class="scroll" style="flex:1;overflow:auto;padding:14px;display:flex;flex-direction:column;gap:11px">
+                <div style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:#555577">Sugerencias proactivas</div>
+                <sc-for list="{{ suggestions }}" as="s" hint-placeholder-count="3">
+                  <div style="background:#14141f;border:1px solid #20203a;border-radius:6px;padding:11px 12px" style-hover="border-color:rgba(0,255,245,.35)">
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px"><span style="color:{{ s.iconColor }};display:flex">{{ s.iconEl }}</span><span style="font-family:'Inter',sans-serif;font-size:12.5px;font-weight:600;color:#e0e0f0">{{ s.title }}</span></div>
+                    <div style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#8888aa;background:#0a0a0f;border-radius:3px;padding:6px 8px;margin-bottom:9px;white-space:pre-wrap">{{ s.cmd }}</div>
+                    <div style="display:flex;gap:7px"><div onClick="{{ s.run }}" style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#050507;background:#00fff5;padding:5px 14px;border-radius:2px;cursor:pointer" style-hover="box-shadow:0 0 14px rgba(0,255,245,.6)">{{ s.action }}</div></div>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+
+            <!-- CONTEXT MODE -->
+            <sc-if value="{{ contextActive }}" hint-placeholder-val="{{ false }}">
+              <div class="scroll" style="flex:1;overflow:auto;padding:14px;display:flex;flex-direction:column;gap:16px;font-family:'JetBrains Mono',monospace">
+                <div>
+                  <div style="font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:#555577;margin-bottom:7px">Working directory</div>
+                  <div style="font-size:12.5px;color:#0088ff">{{ cwd }}</div>
+                </div>
+                <div>
+                  <div style="font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:#555577;margin-bottom:7px">Git status</div>
+                  <div style="font-size:12.5px;color:#e0e0f0;line-height:1.7"><span style="color:#00ff88">branch</span> {{ branch }}<br><span style="color:#ffee00">M</span> src/agent/loop.ts<br><span style="color:#ffee00">M</span> src/pty/session.ts<br><span style="color:#555577">↑2 ↓0 ⚡1</span></div>
+                </div>
+                <div>
+                  <div style="font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:#555577;margin-bottom:7px">Último comando</div>
+                  <div style="font-size:12.5px;color:#e0e0f0"><span style="color:#00fff5">❯</span> npm run build <span style="color:#ff0044">· exit 1</span></div>
+                </div>
+                <div>
+                  <div style="font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:#555577;margin-bottom:7px">Output (tail)</div>
+                  <div style="font-size:12px;color:#8888aa;background:#0a0a0f;border-radius:4px;padding:9px 10px;white-space:pre-wrap;line-height:1.5"><span style="color:#ff0044">error TS2345</span> en loop.ts:84
+Found 1 error.</div>
+                  <div style="font-size:11px;color:#00fff5;margin-top:6px;cursor:pointer">ver output completo →</div>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+        </div>
+
+        <!-- COMMAND PALETTE overlay -->
+        <sc-if value="{{ paletteOpen }}" hint-placeholder-val="{{ false }}">
+          <div onClick="{{ closePalette }}" style="position:absolute;inset:0;background:rgba(5,5,7,.6);backdrop-filter:blur(3px);display:flex;justify-content:center;padding-top:96px;z-index:50">
+            <div onClick="{{ stop }}" style="width:560px;height:fit-content;max-height:440px;background:#14141f;border:1px solid rgba(0,255,245,.3);border-radius:9px;box-shadow:0 30px 80px rgba(0,0,0,.7),0 0 40px rgba(0,255,245,.12);overflow:hidden;display:flex;flex-direction:column;animation:scalein .16s ease-out">
+              <div style="display:flex;align-items:center;gap:11px;padding:14px 16px;border-bottom:1px solid #20203a">
+                <span style="color:#00fff5;display:flex"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></span>
+                <span style="font-family:'JetBrains Mono',monospace;font-size:14px;color:#e0e0f0;flex:1">Search commands…<span style="color:#00fff5;animation:blink 1s step-end infinite">▌</span></span>
+                <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#555577;border:1px solid #33334a;border-radius:3px;padding:2px 6px">esc</span>
+              </div>
+              <div class="scroll" style="overflow:auto;padding:6px">
+                <sc-for list="{{ paletteResults }}" as="p" hint-placeholder-count="5">
+                  <div style="display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:5px;cursor:pointer;background:{{ p.bg }}" style-hover="background:#20203a">
+                    <span style="color:{{ p.color }};display:flex">{{ p.iconEl }}</span>
+                    <span style="font-family:'Inter',sans-serif;font-size:13px;color:#e0e0f0;flex:1">{{ p.title }}</span>
+                    <span style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#555577">{{ p.cat }}</span>
+                    <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#8888aa">{{ p.key }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+
+    <!-- ========================= 1b ========================= -->
+    <div id="1b" style="display:flex;flex-direction:column;gap:16px;scroll-margin:80px">
+      <div style="display:flex;align-items:center;gap:14px">
+        <div style="font-family:'JetBrains Mono',monospace;font-weight:700;font-size:13px;color:#050507;background:#ff00aa;padding:4px 11px;border-radius:4px;box-shadow:0 0 14px rgba(255,0,170,.5)">1b</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:14px;color:#e0e0f0">AI Dock · panel abajo, terminal full-width</div>
+      </div>
+      <div style="width:1180px;height:848px;background:#0a0a0f;border:1px solid rgba(255,0,170,.14);border-radius:11px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 40px 100px rgba(0,0,0,.65),0 0 60px rgba(255,0,170,.05)">
+        <div style="height:38px;flex:none;background:#050507;border-bottom:1px solid rgba(0,255,245,.1);display:flex;align-items:stretch;padding-left:14px">
+          <div style="display:flex;align-items:center;gap:9px;padding-right:16px"><span style="font-family:'JetBrains Mono',monospace;font-weight:700;font-size:14px;letter-spacing:.34em;color:#00fff5;text-shadow:0 0 10px rgba(0,255,245,.45)">RAZOR</span></div>
+          <div style="display:flex;align-items:flex-end;flex:1">
+            <div style="display:flex;align-items:center;gap:8px;min-width:150px;height:100%;padding:0 13px;background:#0a0a0f;border-top:2px solid #00fff5;animation:glowpulse 2.6s ease-in-out infinite"><span style="width:7px;height:7px;border-radius:50%;background:#ff0044;box-shadow:0 0 8px rgba(255,0,68,.8);animation:errpulse 1.1s ease-in-out infinite"></span><span style="font-family:'JetBrains Mono',monospace;font-size:12.5px;color:#e0e0f0">razor-core</span></div>
+            <div style="display:flex;align-items:center;gap:8px;min-width:150px;height:100%;padding:0 13px;background:#0f0f17;border-top:2px solid transparent"><span style="font-family:'JetBrains Mono',monospace;font-size:12.5px;color:#8888aa">api-server</span></div>
+          </div>
+          <div style="display:flex;align-items:stretch"><div style="width:44px;display:flex;align-items:center;justify-content:center;color:#8888aa"><svg width="13" height="13" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.6"><line x1="5" y1="12" x2="19" y2="12"></line></svg></div><div style="width:44px;display:flex;align-items:center;justify-content:center;color:#8888aa"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="16" rx="1"></rect></svg></div><div style="width:44px;display:flex;align-items:center;justify-content:center;color:#8888aa"><svg width="13" height="13" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></div></div>
+        </div>
+        <div style="flex:1;display:flex;min-height:0">
+          <div style="width:52px;flex:none;background:#0f0f17;border-right:1px solid rgba(0,255,245,.07);display:flex;flex-direction:column;align-items:center;padding:12px 0;gap:6px">
+            <div style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:6px;color:#00fff5;background:#20203a;box-shadow:inset 2px 0 0 #00fff5"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg></div>
+            <div style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:6px;color:#8888aa"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg></div>
+            <div style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:6px;color:#8888aa"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v5h5"></path><path d="M3.05 13A9 9 0 106 5.3L3 8"></path><path d="M12 7v5l4 2"></path></svg></div>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;min-width:0">
+            <div style="flex:1;overflow:hidden;padding:14px 18px;background-color:#0a0a0f;background-image:linear-gradient(rgba(0,255,245,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,255,245,.03) 1px,transparent 1px);background-size:34px 34px;font-family:'JetBrains Mono',monospace;font-size:14px;line-height:1.55">
+              <div><span style="color:#00fff5;text-shadow:0 0 8px rgba(0,255,245,.5)">❯ </span><span style="color:#00ff88">arca</span><span style="color:#8888aa">@</span><span style="color:#0088ff">razor</span> git status</div>
+              <div><span style="color:#8888aa">On branch </span><span style="color:#00ff88">feat/agent-loop</span></div>
+              <div><span style="color:#ff0044">  modified:   </span>src/agent/loop.ts</div>
+              <div style="height:16px"></div>
+              <div><span style="color:#00fff5;text-shadow:0 0 8px rgba(0,255,245,.5)">❯ </span>npm run build</div>
+              <div><span style="color:#8888aa">&gt; tsc -p tsconfig.json</span></div>
+              <div style="height:10px"></div>
+              <div><span style="color:#00fff5">src/agent/loop.ts</span><span style="color:#8888aa">:84:23 - </span><span style="color:#ff0044;text-shadow:0 0 8px rgba(255,0,68,.5)">error</span><span> TS2345: Argument of type </span><span style="color:#ffee00">'string | undefined'</span></div>
+              <div><span>is not assignable to parameter of type </span><span style="color:#ffee00">'string'</span>.</div>
+              <div style="height:10px"></div>
+              <div><span style="color:#ff0044">Found 1 error</span><span style="color:#8888aa"> in src/agent/loop.ts:84</span></div>
+              <div style="height:10px"></div>
+              <div><span style="color:#00fff5;text-shadow:0 0 8px rgba(0,255,245,.5)">❯ </span><span style="color:#00fff5;animation:blink 1s step-end infinite">█</span></div>
+            </div>
+            <div style="height:26px;flex:none;background:#050507;border-top:1px solid rgba(0,255,245,.06);display:flex;align-items:center;padding:0 12px;gap:16px;font-family:'JetBrains Mono',monospace;font-size:11.5px">
+              <span style="color:#e0e0f0">~/dev/razor/core</span><span style="color:#ffee00">⎇ feat/agent-loop ✱1</span><div style="flex:1"></div><span style="color:#8888aa">zsh</span><span style="color:#555577">1.8s</span><span><span style="color:#555577">exit </span><span style="color:#ff0044;text-shadow:0 0 8px rgba(255,0,68,.5);font-weight:600">1</span></span>
+            </div>
+            <!-- AI DOCK -->
+            <div style="height:238px;flex:none;background:#0f0f17;border-top:2px solid #ff00aa;box-shadow:0 -10px 30px rgba(255,0,170,.1);display:flex;flex-direction:column;animation:slideup .25s ease-out">
+              <div style="display:flex;align-items:center;gap:9px;padding:9px 14px;border-bottom:1px solid rgba(255,0,170,.12)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ff00aa" stroke-width="1.5" style="filter:drop-shadow(0 0 5px rgba(255,0,170,.5))"><rect x="4" y="4" width="16" height="16" rx="2"></rect><rect x="9" y="9" width="6" height="6"></rect></svg><span style="font-family:'JetBrains Mono',monospace;font-size:12.5px;font-weight:600;color:#e0e0f0;letter-spacing:.06em;flex:1">AI Assistant · dock</span><span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:#555577">Ctrl+Shift+A</span></div>
+              <div style="flex:1;overflow:hidden;padding:12px 14px;display:flex;flex-direction:column;gap:11px">
+                <div style="display:flex;gap:9px;align-items:flex-start"><div style="width:22px;height:22px;flex:none;border-radius:50%;background:#14141f;border:1px solid rgba(255,0,170,.4);display:flex;align-items:center;justify-content:center;color:#ff00aa"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="16" height="16" rx="2"></rect><rect x="9" y="9" width="6" height="6"></rect></svg></div><div style="flex:1;background:#0a0a0f;border-left:2px solid #ff00aa;border-radius:0 6px 6px 0;padding:9px 11px;font-family:'Inter',sans-serif;font-size:13px;color:#e0e0f0;line-height:1.5">El build falló por un tipo <span style="color:#ffee00;font-family:'JetBrains Mono',monospace">string | undefined</span>. Agregá un guard antes del <span style="color:#ffee00;font-family:'JetBrains Mono',monospace">dispatch()</span> — ¿lo aplico?</div></div>
+              </div>
+              <div style="flex:none;padding:10px 14px;border-top:1px solid rgba(255,0,170,.1)"><div style="background:#0a0a0f;border:1px solid #20203a;border-radius:7px;padding:8px 10px;display:flex;align-items:center;gap:8px"><span style="flex:1;font-family:'Inter',sans-serif;font-size:13px;color:#555577">Preguntá sobre el terminal…</span><div style="flex:none;width:28px;height:28px;border-radius:6px;background:#00fff5;display:flex;align-items:center;justify-content:center;color:#050507;box-shadow:0 0 12px rgba(0,255,245,.4)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg></div></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================= 1c ========================= -->
+    <div id="1c" style="display:flex;flex-direction:column;gap:16px;scroll-margin:80px">
+      <div style="display:flex;align-items:center;gap:14px">
+        <div style="font-family:'JetBrains Mono',monospace;font-weight:700;font-size:13px;color:#050507;background:#00ff88;padding:4px 11px;border-radius:4px;box-shadow:0 0 14px rgba(0,255,136,.5)">1c</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:14px;color:#e0e0f0">Command Center · split terminal + AI en context</div>
+      </div>
+      <div style="width:1320px;height:848px;background:#0a0a0f;border:1px solid rgba(0,255,136,.14);border-radius:11px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 40px 100px rgba(0,0,0,.65),0 0 60px rgba(0,255,136,.05)">
+        <div style="height:38px;flex:none;background:#050507;border-bottom:1px solid rgba(0,255,245,.1);display:flex;align-items:center;padding:0 14px;gap:16px">
+          <div style="display:flex;align-items:center;gap:9px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00fff5" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="filter:drop-shadow(0 0 5px rgba(0,255,245,.6))"><polyline points="5 6 12 12 5 18"></polyline><line x1="13" y1="18" x2="20" y2="18"></line></svg><span style="font-family:'JetBrains Mono',monospace;font-weight:700;font-size:14px;letter-spacing:.34em;color:#00fff5;text-shadow:0 0 10px rgba(0,255,245,.45)">RAZOR</span></div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#555577;letter-spacing:.1em">focus mode · sin sidebar · ⌘K para todo</div>
+          <div style="flex:1"></div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#555577;border:1px solid #20203a;border-radius:4px;padding:3px 10px;display:flex;gap:8px;align-items:center"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#00fff5" stroke-width="1.7" stroke-linecap="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>Ctrl+Shift+P</div>
+          <div style="display:flex;gap:10px;color:#8888aa;padding-left:4px"><svg width="13" height="13" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.6"><line x1="5" y1="12" x2="19" y2="12"></line></svg><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="16" rx="1"></rect></svg><svg width="13" height="13" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></div>
+        </div>
+        <div style="flex:1;display:flex;min-height:0">
+          <!-- split panes -->
+          <div style="flex:1;display:flex;flex-direction:column;min-width:0;border-right:1px solid rgba(0,255,245,.06)">
+            <div style="flex:1;overflow:hidden;padding:13px 16px;background-color:#0a0a0f;background-image:linear-gradient(rgba(0,255,245,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,255,245,.03) 1px,transparent 1px);background-size:34px 34px;font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.55">
+              <div style="font-size:10px;letter-spacing:.16em;color:#555577;text-transform:uppercase;margin-bottom:8px">pane 1 · core</div>
+              <div><span style="color:#00fff5;text-shadow:0 0 8px rgba(0,255,245,.5)">❯ </span>git status</div>
+              <div><span style="color:#8888aa">On branch </span><span style="color:#00ff88">feat/agent-loop</span></div>
+              <div><span style="color:#ff0044">  modified:   </span>src/agent/loop.ts</div>
+              <div style="height:8px"></div>
+              <div><span style="color:#00fff5;text-shadow:0 0 8px rgba(0,255,245,.5)">❯ </span>npm run build</div>
+              <div><span style="color:#ff0044;text-shadow:0 0 8px rgba(255,0,68,.5)">error</span><span style="color:#8888aa"> TS2345 · loop.ts:84</span></div>
+              <div><span style="color:#ff0044">Found 1 error</span></div>
+              <div style="height:8px"></div>
+              <div><span style="color:#00fff5;text-shadow:0 0 8px rgba(0,255,245,.5)">❯ </span><span style="color:#00fff5;animation:blink 1s step-end infinite">█</span></div>
+            </div>
+            <div style="flex:1;overflow:hidden;padding:13px 16px;border-top:1px solid rgba(0,255,245,.06);background:#0a0a0f;font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.55">
+              <div style="font-size:10px;letter-spacing:.16em;color:#555577;text-transform:uppercase;margin-bottom:8px">pane 2 · server</div>
+              <div><span style="color:#00fff5;text-shadow:0 0 8px rgba(0,255,245,.5)">❯ </span>npm run dev</div>
+              <div><span style="color:#aa00ff">▲ RAZOR API</span><span style="color:#8888aa"> ready in 412ms</span></div>
+              <div><span style="color:#8888aa">➜ Local:  </span><span style="color:#0088ff">http://localhost:8787</span></div>
+              <div style="height:6px"></div>
+              <div><span style="color:#555577">[12:04:53] </span><span style="color:#00ff88">POST</span> /agent/complete <span style="color:#00ff88">200</span> <span style="color:#555577">1204ms</span></div>
+              <div><span style="color:#555577">[12:04:55] </span><span style="color:#00ff88">GET</span> /health <span style="color:#00ff88">200</span> <span style="color:#555577">3ms</span></div>
+              <div style="height:6px"></div>
+              <div><span style="color:#00fff5;text-shadow:0 0 8px rgba(0,255,245,.5)">❯ </span><span style="color:#00fff5;animation:blink 1s step-end infinite">█</span></div>
+            </div>
+          </div>
+          <!-- AI context panel -->
+          <div style="width:360px;flex:none;background:#0f0f17;display:flex;flex-direction:column">
+            <div style="display:flex;align-items:center;gap:9px;padding:12px 14px;border-bottom:1px solid rgba(0,255,136,.1)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00ff88" stroke-width="1.5" style="filter:drop-shadow(0 0 5px rgba(0,255,136,.5))"><rect x="4" y="4" width="16" height="16" rx="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line></svg><span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;color:#e0e0f0;flex:1">AI · Context</span><span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#00ff88;border:1px solid rgba(0,255,136,.35);border-radius:100px;padding:2px 8px">LIVE</span></div>
+            <div style="flex:1;overflow:hidden;padding:15px 14px;display:flex;flex-direction:column;gap:17px;font-family:'JetBrains Mono',monospace">
+              <div><div style="font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#555577;margin-bottom:6px">Lo que ve el agente</div><div style="font-size:12.5px;color:#0088ff">~/dev/razor/core</div></div>
+              <div><div style="font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#555577;margin-bottom:6px">Git</div><div style="font-size:12.5px;line-height:1.7;color:#e0e0f0"><span style="color:#00ff88">⎇ feat/agent-loop</span><br><span style="color:#ffee00">M</span> loop.ts <span style="color:#ffee00">M</span> session.ts</div></div>
+              <div><div style="font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#555577;margin-bottom:6px">Diagnóstico</div><div style="background:#14141f;border:1px solid rgba(255,0,68,.3);border-radius:6px;padding:10px 11px"><div style="font-size:12px;color:#ff0044;margin-bottom:5px">TS2345 · loop.ts:84</div><div style="font-family:'Inter',sans-serif;font-size:12.5px;color:#8888aa;line-height:1.5">payload.command puede ser undefined.</div><div style="margin-top:8px;font-size:11.5px;color:#00ff88;background:#0a0a0f;border-radius:4px;padding:7px 9px;white-space:pre-wrap">if (!payload.command) return</div></div></div>
+              <div style="margin-top:auto"><div style="display:flex;gap:8px"><div style="flex:1;text-align:center;font-family:'JetBrains Mono',monospace;font-size:12px;color:#050507;background:#00ff88;padding:8px 0;border-radius:2px;box-shadow:0 0 14px rgba(0,255,136,.4)">Apply fix</div><div style="flex:1;text-align:center;font-family:'JetBrains Mono',monospace;font-size:12px;color:#8888aa;border:1px solid #20203a;padding:8px 0;border-radius:2px">Explain</div></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  buildTabs() {
+    const cy = '#00fff5', gr = '#00ff88', bl = '#0088ff', rd = '#ff0044', mg = '#ff00aa', ye = '#ffee00', pu = '#aa00ff', tx = '#e0e0f0', mu = '#8888aa', sd = '#555577';
+    const P = () => ({ x: '❯ ', c: cy, s: '0 0 8px rgba(0,255,245,.5)', w: 400 });
+    const S = (x, c, s, w) => ({ x, c: c || tx, s: s || 'none', w: w || 400 });
+    const cur = () => ({ x: '█', c: cy, s: '0 0 8px rgba(0,255,245,.6)', w: 400 });
+    return [
+      {
+        name: 'razor-core', cwd: '~/dev/razor/core', branch: 'feat/agent-loop', gitStatus: '✱1 ↑2', shell: 'zsh', exit: 1, error: true, elapsed: '1.8s', dirty: true,
+        lines: [
+          [P(), S('git status')],
+          [S('On branch ', mu), S('feat/agent-loop', gr)],
+          [S('Changes not staged for commit:', mu)],
+          [S('  modified:   ', rd), S('src/agent/loop.ts')],
+          [S('  modified:   ', rd), S('src/pty/session.ts')],
+          [S('')],
+          [P(), S('npm run build')],
+          [S('> razor-core@0.4.2 build', mu)],
+          [S('> tsc -p tsconfig.json', mu)],
+          [S('')],
+          [S('src/agent/loop.ts', cy), S(':84:23 - ', mu), S('error', rd, '0 0 8px rgba(255,0,68,.5)', 600), S(' TS2345: Argument of type ', tx), S("'string | undefined'", ye)],
+          [S('is not assignable to parameter of type ', tx), S("'string'.", ye)],
+          [S('')],
+          [S('84   ', sd), S('await this.dispatch(payload.command)', tx)],
+          [S('                          ~~~~~~~~~~~~~~~', rd)],
+          [S('')],
+          [S('Found 1 error', rd, '0 0 6px rgba(255,0,68,.4)', 600), S(' in src/agent/loop.ts:84', mu)],
+          [S('')],
+          [P(), cur()],
+        ],
+      },
+      {
+        name: 'api-server', cwd: '~/dev/razor/server', branch: 'main', gitStatus: '✓', shell: 'zsh', exit: 0, error: false, elapsed: '42:18', dirty: false,
+        lines: [
+          [P(), S('docker compose up -d')],
+          [S('[+] Running 3/3', mu)],
+          [S(' ✔ ', gr), S('Container razor-db     ', tx), S('Started', gr)],
+          [S(' ✔ ', gr), S('Container razor-redis  ', tx), S('Started', gr)],
+          [S(' ✔ ', gr), S('Container razor-api    ', tx), S('Started', gr)],
+          [S('')],
+          [P(), S('npm run dev')],
+          [S('> tsx watch src/index.ts', mu)],
+          [S('')],
+          [S('  ▲ RAZOR API', pu, '0 0 8px rgba(170,0,255,.4)'), S('  ready in 412ms', mu)],
+          [S('  ➜  Local:   ', mu), S('http://localhost:8787', bl)],
+          [S('  ➜  Agent:   ', mu), S('ws://localhost:8788', bl)],
+          [S('')],
+          [S('[12:04:51] ', sd), S('GET ', gr), S('/health 200 ', tx), S('3ms', sd)],
+          [S('[12:04:53] ', sd), S('POST ', gr), S('/agent/complete 200 ', tx), S('1204ms', sd)],
+          [S('[12:04:57] ', sd), S('GET ', gr), S('/sessions 200 ', tx), S('8ms', sd)],
+          [S('')],
+          [P(), cur()],
+        ],
+      },
+      {
+        name: 'scratch', cwd: '~', branch: 'main', gitStatus: '✓', shell: 'bash', exit: 0, error: false, elapsed: '0.0s', dirty: false, empty: true,
+        lines: [[P(), cur()]],
+      },
+    ];
+  }
+
+  ic(paths) { return React.createElement('svg', { width: 15, height: 15, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.6, strokeLinecap: 'round', strokeLinejoin: 'round', dangerouslySetInnerHTML: { __html: paths } }); }
+
+  state = {
+    activeTab: 0,
+    aiMode: 'chat',
+    aiOpen: true,
+    paletteOpen: false,
+    bottomOn: true,
+    aiTyping: false,
+    draft: '',
+    tabs: this.buildTabs(),
+    messages: [
+      { who: 'ai', text: 'Detecté un build error en src/agent/loop.ts:84 — payload.command es string | undefined y dispatch() espera string.' },
+      { who: 'user', text: '¿cómo lo resuelvo sin castear con as string?' },
+      { who: 'ai', text: 'Meté un guard temprano. Si no hay comando, salís antes de despachar:', code: 'if (!payload.command) return\nawait this.dispatch(payload.command)' },
+    ],
+  };
+
+  componentDidMount() {
+    this._onKey = (e) => {
+      const k = (e.key || '').toLowerCase();
+      if (e.ctrlKey && e.shiftKey && k === 'p') { e.preventDefault(); this.setState(s => ({ paletteOpen: !s.paletteOpen })); }
+      else if (e.ctrlKey && e.shiftKey && k === 'a') { e.preventDefault(); this.setState(s => ({ aiOpen: !s.aiOpen })); }
+      else if (k === 'escape') { this.setState({ paletteOpen: false }); }
+    };
+    window.addEventListener('keydown', this._onKey);
+  }
+  componentWillUnmount() { window.removeEventListener('keydown', this._onKey); }
+
+  send = () => {
+    const d = (this.state.draft || '').trim();
+    if (!d) return;
+    this.setState(s => ({ messages: [...s.messages, { who: 'user', text: d }], draft: '', aiTyping: true }));
+    clearTimeout(this._t);
+    this._t = setTimeout(() => {
+      this.setState(s => ({ aiTyping: false, messages: [...s.messages, { who: 'ai', text: 'Ya lo tengo en contexto. Preparé el fix — lo aplicás con Apply en la barra inferior, o te muestro el diff completo.', code: 'if (!payload.command) return\nawait this.dispatch(payload.command)' }] }));
+    }, 1300);
+  };
+
+  renderVals() {
+    const t = this.state.tabs[this.state.activeTab];
+    const m = this.state.aiMode;
+    const tab = (bg, fg) => ({ bg, fg });
+    const seg = (cond) => cond ? { bg: '#20203a', color: '#00fff5' } : { bg: 'transparent', color: '#8888aa' };
+    return {
+      tabs: this.state.tabs.map((tb, i) => {
+        const on = i === this.state.activeTab;
+        return {
+          name: tb.name, error: tb.error, select: () => this.setState({ activeTab: i, bottomOn: true }),
+          bg: on ? '#0a0a0f' : '#0f0f17',
+          fg: on ? '#e0e0f0' : '#8888aa',
+          bt: on ? '#00fff5' : 'transparent',
+          anim: on ? 'glowpulse 2.6s ease-in-out infinite' : 'none',
+        };
+      }),
+      activeLines: t.lines.map(segs => ({ segs })),
+      showEmpty: !!t.empty,
+      cwd: t.cwd, branch: t.branch, gitStatus: t.gitStatus, shell: t.shell, exit: t.exit, elapsed: t.elapsed,
+      gitColor: t.dirty ? '#ffee00' : '#00ff88',
+      exitColor: t.exit === 0 ? '#00ff88' : '#ff0044',
+      exitGlow: t.exit === 0 ? '0 0 8px rgba(0,255,136,.4)' : '0 0 8px rgba(255,0,68,.5)',
+      aiWidth: this.state.aiOpen ? '388px' : '0px',
+      bottomVisible: this.state.bottomOn && t.error,
+      chatActive: m === 'chat', suggestActive: m === 'suggestions', contextActive: m === 'context',
+      chatBg: m === 'chat' ? '#20203a' : 'transparent', chatFg: m === 'chat' ? '#00fff5' : '#8888aa',
+      suggestBg: m === 'suggestions' ? '#20203a' : 'transparent', suggestFg: m === 'suggestions' ? '#00fff5' : '#8888aa',
+      contextBg: m === 'context' ? '#20203a' : 'transparent', contextFg: m === 'context' ? '#00fff5' : '#8888aa',
+      setChat: () => this.setState({ aiMode: 'chat' }),
+      setSuggest: () => this.setState({ aiMode: 'suggestions' }),
+      setContext: () => this.setState({ aiMode: 'context' }),
+      messages: this.state.messages.map(x => ({ text: x.text, code: x.code, hasCode: !!x.code, isUser: x.who === 'user', isAi: x.who === 'ai' })),
+      aiTyping: this.state.aiTyping,
+      draft: this.state.draft,
+      onDraft: (e) => this.setState({ draft: e.target.value }),
+      onKey: (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); this.send(); } },
+      send: this.send,
+      applyFix: () => { this.setState(s => ({ bottomOn: false, aiMode: 'chat', messages: [...s.messages, { who: 'ai', text: '✓ Fix aplicado en loop.ts:84 y guardado. Corré npm run build de nuevo cuando quieras.' }] })); },
+      closeBottom: () => this.setState({ bottomOn: false }),
+      togglePalette: () => this.setState(s => ({ paletteOpen: !s.paletteOpen })),
+      closePalette: () => this.setState({ paletteOpen: false }),
+      stop: (e) => e.stopPropagation(),
+      paletteOpen: this.state.paletteOpen,
+      suggestions: [
+        { title: 'Reintentar el build con el fix', cmd: 'npm run build', action: 'Run', iconColor: '#00fff5', iconEl: this.ic('<circle cx="12" cy="12" r="9"></circle><polygon points="10 8 16 12 10 16 10 8"></polygon>') },
+        { title: 'Stashear cambios sin commitear', cmd: 'git stash push -m "wip agent-loop"', action: 'Run', iconColor: '#ffee00', iconEl: this.ic('<path d="M9 18h6"></path><path d="M10 22h4"></path><path d="M15 14c.2-1 .7-1.7 1.4-2.5A4.65 4.65 0 0018 8 6 6 0 006 8c0 1 .2 2.2 1.5 3.5.7.8 1.2 1.5 1.4 2.5"></path>') },
+        { title: 'Guardar esta sesión', cmd: 'razor session save agent-loop', action: 'Save', iconColor: '#ff00aa', iconEl: this.ic('<path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline>') },
+      ],
+      paletteResults: [
+        { title: 'Fix current error with AI', cat: 'AI', key: '⏎', color: '#ff00aa', bg: '#20203a', iconEl: this.ic('<rect x="4" y="4" width="16" height="16" rx="2"></rect><rect x="9" y="9" width="6" height="6"></rect>') },
+        { title: 'New terminal tab', cat: 'Command', key: 'Ctrl T', color: '#00fff5', bg: 'transparent', iconEl: this.ic('<line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>') },
+        { title: 'Toggle AI panel', cat: 'Command', key: 'Ctrl ⇧ A', color: '#00fff5', bg: 'transparent', iconEl: this.ic('<rect x="4" y="4" width="16" height="16" rx="2"></rect><rect x="9" y="9" width="6" height="6"></rect>') },
+        { title: 'Save as snippet', cat: 'Snippet', key: '', color: '#00ff88', bg: 'transparent', iconEl: this.ic('<polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline>') },
+        { title: 'Switch theme: Blood Moon', cat: 'Theme', key: '', color: '#ff0044', bg: 'transparent', iconEl: this.ic('<circle cx="12" cy="12" r="9"></circle>') },
+        { title: 'Clear terminal', cat: 'Command', key: 'Ctrl ⇧ L', color: '#8888aa', bg: 'transparent', iconEl: this.ic('<polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6"></path>') },
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>
