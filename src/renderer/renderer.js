@@ -303,10 +303,12 @@ function initTerminal(tab) {
       // Glow en reposo Y al escribir: el cursor es un block idéntico con o sin foco,
       // así que el halo cyan lo acompaña siempre. Excepciones donde se oculta: al
       // arrancar, con la terminal vacía y el cursor en el origen (0,0) el glow
-      // quedaría pegado arriba a la izquierda sin prompt; tampoco scrolleado en el
-      // historial ni con una selección activa.
+      // quedaría pegado arriba a la izquierda sin prompt; cuando la app oculta el
+      // cursor (DECTCEM ESC[?25l — spinners de CLIs, TUIs) xterm saca el block y el
+      // glow no debe quedar flotando solo; tampoco scrolleado en el historial ni con
+      // una selección activa.
       const atOrigin = buf.cursorX === 0 && buf.cursorY === 0; // terminal vacía / sin prompt aún
-      if (!tab.shellStarted || atOrigin || buf.viewportY !== buf.baseY || term.hasSelection()) { glowEl.style.display = 'none'; return; }
+      if (!tab.shellStarted || atOrigin || tab.cursorHidden || buf.viewportY !== buf.baseY || term.hasSelection()) { glowEl.style.display = 'none'; return; }
       // Revelamos el cursor recién en el primer frame en que el glow se muestra: pasamos
       // el inactiveStyle a 'block' y enfocamos, así el block y su glow aparecen SIEMPRE
       // juntos, nunca antes (ni un "agujero" en 0,0). Una sola vez por tab.
@@ -334,6 +336,23 @@ function initTerminal(tab) {
       new MutationObserver(positionGlow).observe(xtermForObs, { attributes: true, attributeFilter: ['class'] });
     }
     requestAnimationFrame(positionGlow);
+
+    // DECTCEM (ESC[?25h / ESC[?25l): las apps que ocultan el cursor —spinners de CLIs,
+    // TUIs como vim/less— sacan el block que dibuja xterm. El glow lo posicionamos
+    // nosotros, así que sin esto quedaba el halo cyan flotando sin bloque adentro.
+    // Trackeamos la visibilidad por CSI (private mode 25) y escondemos el glow junto
+    // con el block. Devolvemos false: xterm igual procesa el hide/show real del cursor.
+    try {
+      const setCursorHidden = (hidden) => { tab.cursorHidden = hidden; positionGlow(); };
+      term.parser.registerCsiHandler({ prefix: '?', final: 'h' }, (params) => {
+        if (params.includes(25)) setCursorHidden(false);
+        return false;
+      });
+      term.parser.registerCsiHandler({ prefix: '?', final: 'l' }, (params) => {
+        if (params.includes(25)) setCursorHidden(true);
+        return false;
+      });
+    } catch (e) { console.warn('[CONSOLE] CSI ?25 handler no disponible:', e && e.message); }
 
   // Ctrl+C: copy if selection exists, otherwise send SIGINT (\x03)
   term.attachCustomKeyEventHandler((e) => {
