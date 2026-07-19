@@ -24,6 +24,9 @@ if (!gotTheLock) {
 } else {
   app.on('second-instance', () => {
     if (mainWindow) {
+      // El caso típico acá es la ventana OCULTA en el tray (close → hide): focus()
+      // solo no la muestra, hace falta el show() explícito.
+      if (!mainWindow.isVisible()) mainWindow.show();
       if (mainWindow.isMinimized()) mainWindow.restore();
       mainWindow.focus();
     }
@@ -195,10 +198,15 @@ ipcMain.handle('pty:create', (event, opts) => {
   if (isWin) {
     const userProfile = 'C:\\PowerShell\\core-profile.ps1';
     const umbrovexInit = getOsc7ScriptPath();
-    const bootstrap = umbrovexInit
-      ? `. '${psQuote(userProfile)}'; . '${psQuote(umbrovexInit)}'`
-      : `. '${psQuote(userProfile)}'`;
-    shellArgs = ['-NoLogo', '-NoExit', '-ExecutionPolicy', 'Bypass', '-Command', bootstrap];
+    // Dot-sourcear sólo lo que existe: la app se distribuye por GitHub Releases, y en
+    // una máquina sin el core-profile el path hardcodeado hacía que toda shell nueva
+    // arrancara escupiendo el error del dot-source.
+    const bootstrap = [];
+    if (fs.existsSync(userProfile)) bootstrap.push(`. '${psQuote(userProfile)}'`);
+    if (umbrovexInit) bootstrap.push(`. '${psQuote(umbrovexInit)}'`);
+    shellArgs = bootstrap.length
+      ? ['-NoLogo', '-NoExit', '-ExecutionPolicy', 'Bypass', '-Command', bootstrap.join('; ')]
+      : ['-NoLogo'];
   }
   const id = ++ptyIdCounter;
   const ptyProc = pty.spawn(shell, shellArgs, {

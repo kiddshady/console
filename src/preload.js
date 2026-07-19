@@ -3,7 +3,6 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('umbrovex', {
   // Window controls
   minimize: () => ipcRenderer.send('window:minimize'),
-  maximize: () => ipcRenderer.send('window:maximize'),
   close: () => ipcRenderer.send('window:close'),
   // El main avisa cuando la ventana gana foco a nivel SO (alt-tab, taskbar, tray).
   onFocus: (callback) => ipcRenderer.on('window:focus', () => callback()),

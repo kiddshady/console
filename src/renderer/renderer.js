@@ -32,7 +32,6 @@ const state = {
   snippets: [],
   snippetIdCounter: 0,
   history: [],
-  cmdBuffer: '',
 };
 
 /* ========== THEME (xterm) ========== */
@@ -77,7 +76,12 @@ function parseOsc7Cwd(data) {
   return p || null;
 }
 
+// Tope de shells simultáneas. El guard vive acá (y no en cada entry point) para
+// cubrir de una las tres vías: botón +, Ctrl+Shift+T y el command palette.
+const MAX_TABS = 4;
+
 function createTab(name) {
+  if (state.tabs.length >= MAX_TABS) return null;
   const id = ++state.tabIdCounter;
   const tab = {
     id,
@@ -86,6 +90,7 @@ function createTab(name) {
     term: null,
     fitAddon: null,
     cwd: umbrovexAPI.defaultCwd, // toda shell nueva arranca en C:\ (ver preload/main)
+    cmdBuffer: '', // línea a medio tipear (para el history); por tab, no global
   };
   state.tabs.push(tab);
   state.activeTabId = id;
@@ -202,6 +207,14 @@ function renderTabs() {
     });
     container.appendChild(el);
   });
+  // Al límite de shells, el + se atenúa (la transición está en el CSS) y su tooltip
+  // explica por qué no responde.
+  const plusBtn = document.getElementById('new-tab');
+  if (plusBtn) {
+    const atLimit = state.tabs.length >= MAX_TABS;
+    plusBtn.classList.toggle('at-limit', atLimit);
+    plusBtn.dataset.tip = atLimit ? `Shell limit reached (${MAX_TABS} max)` : 'New tab (Ctrl+Shift+T)';
+  }
 }
 
 /* ========== TERMINAL ========== */
@@ -395,24 +408,9 @@ function initTerminal(tab) {
     });
   } catch (e) { console.warn('[CONSOLE] OSC7 handler no disponible:', e && e.message); }
 
-  // PTY data → terminal (register BEFORE creating PTY to avoid race condition)
-  umbrovexAPI.pty.onData((id, data) => {
-    if (id === tab.ptyId && tab.term) {
-      tab.shellStarted = true; // primer output: abre el gate del glow (y del reveal del cursor)
-      tab.term.write(data);
-    }
-  });
-
-  umbrovexAPI.pty.onExit((id, exitCode) => {
-    if (id === tab.ptyId) {
-      tab.term.write(`\r\n\x1b[38;2;136;136;170m[process exited with code ${exitCode}]\x1b[0m\r\n`);
-      updateStatusExit(exitCode);
-    }
-  });
-
-  // Terminal input → PTY
+  // Terminal input → PTY. OJO: acá NO se loguea `data` — es cada tecla que tipea el
+  // usuario, contraseñas incluidas, y los logs del renderer se reenvían al stdout del main.
   term.onData(data => {
-    console.log('[CONSOLE] term.onData fired, ptyId=', tab.ptyId, 'data=', JSON.stringify(data));
     if (tab.ptyId) {
       umbrovexAPI.pty.write(tab.ptyId, data);
     } else {
@@ -552,7 +550,7 @@ function utRow(icon, label, title, sub, closable) {
         `<div class="ut-title">${title}</div>` +
         (sub ? `<div class="ut-sub">${sub}</div>` : '') +
       `</div>` +
-      (closable ? `<button class="ut-close" data-ut="later" title="Dismiss">${UT_SVG.x}</button>` : '') +
+      (closable ? `<button class="ut-close" data-ut="later" data-tip="Dismiss">${UT_SVG.x}</button>` : '') +
     `</div>`
   );
 }
@@ -706,6 +704,7 @@ function executePaletteItem(index) {
 }
 
 function movePaletteSelection(dir) {
+  if (!state.paletteItems.length) return; // filtro sin matches: nada que seleccionar (evita el % 0 → NaN)
   state.paletteSelected = (state.paletteSelected + dir + state.paletteItems.length) % state.paletteItems.length;
   document.querySelectorAll('.palette-item').forEach((el, i) => {
     el.classList.toggle('selected', i === state.paletteSelected);
@@ -831,8 +830,8 @@ function renderSnippets() {
         <div class="snippet-cmd">${escapeHtml(s.cmd)}</div>
       </div>
       <div class="snippet-actions">
-        <button class="snippet-run" data-id="${s.id}" title="Run">${SVG_ICONS.play}</button>
-        <button class="snippet-del" data-id="${s.id}" title="Delete">${SVG_ICONS.trash}</button>
+        <button class="snippet-run" data-id="${s.id}" data-tip="Run">${SVG_ICONS.play}</button>
+        <button class="snippet-del" data-id="${s.id}" data-tip="Delete">${SVG_ICONS.trash}</button>
       </div>
     `;
     list.appendChild(el);
@@ -890,20 +889,41 @@ function trackCommand(data, tab) {
   for (const ch of clean) {
     const code = ch.charCodeAt(0);
     if (ch === '\r' || ch === '\n') {
-      if (state.cmdBuffer.trim()) addHistoryEntry(state.cmdBuffer.trim(), tab.name);
-      state.cmdBuffer = '';
+      if (tab.cmdBuffer.trim()) addHistoryEntry(tab.cmdBuffer.trim(), tab.name);
+      tab.cmdBuffer = '';
     } else if (code === 127 || code === 8) {
-      state.cmdBuffer = state.cmdBuffer.slice(0, -1);
+      tab.cmdBuffer = tab.cmdBuffer.slice(0, -1);
     } else if (code === 3) {
-      state.cmdBuffer = '';
+      tab.cmdBuffer = '';
     } else if (code >= 32 && code < 127) {
-      state.cmdBuffer += ch;
+      tab.cmdBuffer += ch;
     }
   }
 }
 
 /* ========== EVENT LISTENERS ========== */
 function setupEvents() {
+  // PTY → terminal: UN solo par de listeners IPC para toda la app, ruteando por ptyId.
+  // Registrar un par por tab (como era antes) filtrando adentro dejaba listeners
+  // huérfanos al cerrar tabs — y como closeTab dispone la terminal ANTES de que llegue
+  // el pty:exit del kill, el listener viejo escribía sobre una terminal disposed.
+  // Con el ruteo por state.tabs, un tab cerrado ya no está en la lista y el evento
+  // simplemente se ignora.
+  umbrovexAPI.pty.onData((id, data) => {
+    const tab = state.tabs.find(t => t.ptyId === id);
+    if (!tab || !tab.term) return;
+    tab.shellStarted = true; // primer output: abre el gate del glow (y del reveal del cursor)
+    tab.term.write(data);
+  });
+  umbrovexAPI.pty.onExit((id, exitCode) => {
+    const tab = state.tabs.find(t => t.ptyId === id);
+    if (!tab || !tab.term) return;
+    tab.term.write(`\r\n\x1b[38;2;136;136;170m[process exited with code ${exitCode}]\x1b[0m\r\n`);
+    // La status bar refleja el tab que estás MIRANDO: un proceso que muere en un
+    // tab de fondo no pisa el exit code del activo.
+    if (tab.id === state.activeTabId) updateStatusExit(exitCode);
+  });
+
   // Window controls
   document.getElementById('win-min').addEventListener('click', () => umbrovexAPI.minimize());
   document.getElementById('win-close').addEventListener('click', () => umbrovexAPI.close());
@@ -1017,6 +1037,57 @@ function disableTooltips() {
   }).observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['title'] });
 }
 
+/* ========== TOOLTIPS PROPIOS (data-tip) ========== */
+/* Reemplazan al `title` nativo (que disableTooltips() sigue barriendo por si algún
+   addon lo mete). Un solo nodo portaleado al body, posicionado bajo el target (o
+   encima si no hay lugar), con delegación por mouseover para cubrir también los
+   elementos que se crean dinámicamente (tabs, snippets, etc.). */
+function initTooltips() {
+  const tip = document.createElement('div');
+  tip.id = 'tooltip';
+  document.body.appendChild(tip);
+  let timer = null;
+  let current = null;
+  const hide = () => {
+    clearTimeout(timer);
+    timer = null;
+    current = null;
+    tip.classList.remove('show');
+  };
+  const show = (target) => {
+    const text = target.dataset.tip;
+    if (!text || !target.isConnected) return; // el target pudo irse durante el delay
+    tip.textContent = text;
+    tip.classList.remove('above');
+    // Medimos con el texto ya puesto (el nodo tiene layout aunque esté en opacity 0).
+    const r = target.getBoundingClientRect();
+    const tw = tip.offsetWidth;
+    const th = tip.offsetHeight;
+    let left = Math.round(r.left + r.width / 2 - tw / 2);
+    left = Math.max(6, Math.min(left, window.innerWidth - tw - 6));
+    let top = Math.round(r.bottom + 7);
+    if (top + th > window.innerHeight - 6) {
+      top = Math.round(r.top - th - 7);
+      tip.classList.add('above'); // entra deslizando desde el lado correcto
+    }
+    tip.style.left = left + 'px';
+    tip.style.top = top + 'px';
+    tip.classList.add('show');
+  };
+  document.addEventListener('mouseover', (e) => {
+    const t = e.target.closest ? e.target.closest('[data-tip]') : null;
+    if (t === current) return; // moviéndose dentro del mismo target
+    hide();
+    if (!t) return;
+    current = t;
+    timer = setTimeout(() => show(t), 350);
+  });
+  // Un click sobre el target suele cambiar el estado de la UI: el tooltip ya fue.
+  document.addEventListener('mousedown', hide, true);
+  document.addEventListener('mouseleave', hide); // el cursor salió de la ventana
+  window.addEventListener('blur', hide);
+}
+
 /* ========== INIT ========== */
 // Garantiza que las caras que renderiza la terminal estén cargadas ANTES del primer
 // term.open() (que mide el glyph). Sin esto, la shell 1 se medía con el fallback
@@ -1041,6 +1112,7 @@ function ensureFontsReady() {
 async function init() {
   console.log('[CONSOLE] init() called');
   disableTooltips();
+  initTooltips();
   loadSnippets();
   try {
     setupEvents();

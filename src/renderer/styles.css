@@ -64,6 +64,33 @@ html, body {
   scrollbar-color: rgba(0,255,245,.28) transparent;
 }
 
+/* ========== TOOLTIP PROPIO ========== */
+/* Un solo nodo (#tooltip) portaleado al body; renderer.js lo posiciona y togglea .show.
+   Reemplaza al title nativo de Chromium en toda la app (disableTooltips barre los que
+   pudiera meter algún addon). Sombra suave para separarlo del plano + hairline inset
+   (box-shadow, no border: evita la hilacha de 1px en las esquinas redondeadas). */
+#tooltip {
+  position: fixed;
+  z-index: 500;
+  max-width: 280px;
+  padding: 4px 9px;
+  background: var(--bg-elevated);
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, .5), inset 0 0 0 1px var(--border-subtle);
+  color: var(--text-dim);
+  font-family: var(--font-sans);
+  font-size: 11px;
+  line-height: 1.45;
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
+  opacity: 0;
+  transform: translateY(3px);
+  transition: opacity .16s ease, transform .16s ease;
+}
+#tooltip.above { transform: translateY(-3px); } /* colocado encima: entra desde abajo */
+#tooltip.show { opacity: 1; transform: translateY(0); }
+
 /* ========== APP LAYOUT ========== */
 #app {
   display: flex;
@@ -191,8 +218,12 @@ html, body {
   color: var(--text-faint);
   cursor: pointer;
   -webkit-app-region: no-drag;
+  transition: color 0.18s ease, opacity 0.18s ease;
 }
 .new-tab:hover { color: var(--cyan); }
+/* Con MAX_TABS shells abiertas el + no hace nada: se atenúa y pierde el hover. */
+.new-tab.at-limit { opacity: 0.35; cursor: default; }
+.new-tab.at-limit:hover { color: var(--text-faint); }
 
 .win-controls {
   display: flex;
