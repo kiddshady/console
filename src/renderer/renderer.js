@@ -249,7 +249,11 @@ function initTerminal(tab) {
     term = new Terminal({
     fontFamily: "'JetBrains Mono', 'Cascadia Code', monospace",
     fontSize: 14,
-    lineHeight: 1.5,
+    // 1.2 y no más: la ventana es de alto fijo, así que el line-height es lo único que
+    // decide cuántas filas entran. A 1.5 daba 19 — apretado para los TUIs que se corren
+    // acá adentro (Claude Code, vim, less), que se pasan la vida scrolleando. A 1.2 son
+    // 24 (+26%) sin perder legibilidad con JetBrains Mono a 14px.
+    lineHeight: 1.2,
     theme: CONSOLE_THEME,
     // Cursor block idéntico en reposo y al escribir: mismo estilo con y sin foco
     // (block), sin blink, así el halo cyan (glow div) lo acompaña siempre. Arranca
@@ -419,23 +423,36 @@ function initTerminal(tab) {
     trackCommand(data, tab);
   });
 
+  // Resize. Se registra ANTES de crear el PTY a propósito: el re-measure de la fuente
+  // puede cambiar cols/rows mientras el create (IPC async) todavía está en vuelo, y esos
+  // resizes tempranos se perdían silenciosamente porque el handler salía por tab.ptyId
+  // null. Como la ventana no es redimensionable, nada volvía a dispararlos nunca: el PTY
+  // se quedaba con un ancho distinto al de la grilla para toda la vida del tab. Un TUI
+  // que lee el ancho del PTY (Claude Code, vim, less, fzf) dibujaba entonces contra una
+  // grilla que no era la real y se veía roto.
+  term.onResize(({ cols, rows }) => {
+    if (tab.ptyId) umbrovexAPI.pty.resize(tab.ptyId, cols, rows);
+  });
+
   // Create PTY
+  const createdWith = { cols: term.cols, rows: term.rows };
   umbrovexAPI.pty.create({
-    cols: term.cols,
-    rows: term.rows,
+    cols: createdWith.cols,
+    rows: createdWith.rows,
     cwd: tab.cwd,
   }).then(ptyId => {
     tab.ptyId = ptyId;
     console.log('[CONSOLE] PTY created, ptyId=', ptyId);
+    // Conciliación: si la grilla cambió mientras el create iba y venía, el PTY nació con
+    // el tamaño viejo y hay que corregirlo ahora (el onResize de ese rato no tenía a
+    // quién avisarle).
+    if (term.cols !== createdWith.cols || term.rows !== createdWith.rows) {
+      umbrovexAPI.pty.resize(ptyId, term.cols, term.rows);
+    }
     // No enfocamos acá: el foco y el cursor block se revelan con el prompt (positionGlow).
   }).catch(err => {
     console.error('[CONSOLE] PTY creation FAILED:', err);
     term.write(`\r\n\x1b[38;2;255;0;68m[PTY ERROR: ${err.message || err}]\x1b[0m\r\n`);
-  });
-
-  // Resize
-  term.onResize(({ cols, rows }) => {
-    if (tab.ptyId) umbrovexAPI.pty.resize(tab.ptyId, cols, rows);
   });
 
   // Focus on click — ensure terminal grabs keyboard focus when clicked
