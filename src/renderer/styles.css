@@ -45,9 +45,23 @@ html, body {
   background: var(--bg-deep);
   color: var(--text);
   font-family: var(--font-sans);
+  /* Mismo peso que la terminal (fontWeight: 500 en renderer.js): el chrome heredaba el 400
+     y quedaba más flaco que el texto de las shells. De paso la escala de pesos de la app
+     queda pareja en tres pasos —500 base, 600 títulos y botones, 700 marca— en vez de
+     saltearse el 500. Los cuatro pesos de ambas familias están bundleados en fonts.css,
+     así que no hay negrita sintética. */
+  font-weight: 500;
   -webkit-font-smoothing: antialiased;
   overflow: hidden;
   user-select: none; /* default: no seleccionar UI */
+}
+
+/* Los controles de formulario no heredan la tipografía del documento —usan la del UA—, así
+   que sin esto el input del palette, los dos de snippets y el botón Clear se quedaban solos
+   en 400 mientras el resto del chrome subía a 500. Va a nivel de elemento a propósito: toda
+   regla de clase con peso propio (.panel-btn, .ut-btn: 600) le sigue ganando por especificidad. */
+input, textarea, button, select {
+  font-weight: inherit;
 }
 
 ::selection { background: rgba(0,255,245,.22); }
