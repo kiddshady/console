@@ -254,6 +254,16 @@ function initTerminal(tab) {
     // acá adentro (Claude Code, vim, less), que se pasan la vida scrolleando. A 1.2 son
     // 24 (+26%) sin perder legibilidad con JetBrains Mono a 14px.
     lineHeight: 1.2,
+    // Medio paso de peso más que el 400 por defecto: sobre el fondo casi negro el trazo
+    // de JetBrains Mono a 400 se lava, y a 500 el texto se lee sin llegar a engordar.
+    // Mismo peso que Console Mobile, que bundlea estos mismos .woff2.
+    // No toca la grilla, por dos motivos independientes: el CharSizeService de xterm 5.5
+    // mide la celda con fontSize + fontFamily nada más (el peso no entra en la medición),
+    // y los cuatro pesos de JetBrains Mono son monoespaciados de verdad, con el mismo
+    // avance — así que el glifo tampoco se sale de la celda ya medida.
+    // El bold queda en 700: el contraste normal/negrita se mantiene igual.
+    fontWeight: 500,
+    fontWeightBold: 700,
     theme: CONSOLE_THEME,
     // Cursor block idéntico en reposo y al escribir: mismo estilo con y sin foco
     // (block), sin blink, así el halo cyan (glow div) lo acompaña siempre. Arranca
