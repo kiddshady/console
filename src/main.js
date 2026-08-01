@@ -12,6 +12,7 @@ app.commandLine.appendSwitch('disable-background-timer-throttling');
 const path = require('path');
 const os = require('os');
 const fs = require('fs');
+const { execFileSync } = require('child_process');
 
 let mainWindow;
 let tray = null;
@@ -352,10 +353,135 @@ ipcMain.handle('update:install', () => {
   return { ok: true };
 });
 
+// --- Restos de una instancia anterior ---
+// Una actualización que no sale limpia (quitAndInstall dispara 'before-quit', pero nada
+// garantiza que el proceso termine de irse) deja una ventana huérfana que ya no renderiza.
+// Windows la sigue componiendo, lavada, por debajo de la nueva: al abrir la app se ve un
+// parpadeo gris que NO es de pintado — el layout ya está entero, lo único que cambia es el
+// alfa. Verificado en vivo: dos Console.exe con el mismo StartTime, uno de ellos colgado.
+//
+// Registramos el PID de cada main que arranca y, al arrancar el siguiente, matamos el
+// anterior si sigue vivo. El registro no se borra al salir A PROPÓSITO: si el proceso se
+// fue de verdad, la consulta de abajo falla sola y no cuesta un spawn; si quedó colgado,
+// es justo el caso que queremos cazar.
+//
+// Corre sólo después de ganar el single-instance lock, así que cualquier otro proceso
+// nuestro que siga vivo es por definición un resto. Si el colgado fuera el que RETIENE el
+// lock, esta instancia ni arranca: ese caso queda fuera de alcance a propósito, porque
+// matar a quien tiene el lock es exactamente lo que el lock existe para evitar.
+const instanceRecordPath = () => path.join(app.getPath('userData'), 'instance.json');
+
+function killLeftoverInstance() {
+  let rec;
+  try { rec = JSON.parse(fs.readFileSync(instanceRecordPath(), 'utf8')); } catch { return; }
+  if (!rec || !Number.isInteger(rec.pid) || rec.pid === process.pid) return;
+
+  // ¿sigue vivo? kill(pid, 0) no manda ninguna señal, sólo consulta. ESRCH = ya no existe
+  // (el camino normal, y sale gratis). EPERM significa que existe pero no lo podemos
+  // señalizar, así que seguimos: taskkill /F puede llegar igual.
+  try { process.kill(rec.pid, 0); }
+  catch (err) { if (err.code !== 'EPERM') return; }
+
+  // Vivo. Puede ser el colgado… o un PID reciclado por un proceso ajeno, así que antes de
+  // matar nada confirmamos que la ruta del ejecutable es la nuestra.
+  let exe;
+  try {
+    exe = execFileSync('powershell', ['-NoProfile', '-NonInteractive', '-Command',
+      `(Get-CimInstance Win32_Process -Filter "ProcessId=${rec.pid}").ExecutablePath`],
+      { encoding: 'utf8', timeout: 5000, windowsHide: true }).trim();
+  } catch (err) {
+    console.error(`[CONSOLE] no pude verificar el PID ${rec.pid}:`, err.message);
+    return;
+  }
+  const samePath = (a, b) => path.normalize(a).toLowerCase() === path.normalize(b).toLowerCase();
+  if (!exe || !samePath(exe, process.execPath)) return;   // no es nuestro: no se toca
+
+  // /T se lleva también los helpers (renderer, GPU, utility): no mueren solos si el main
+  // quedó colgado, y son los que retienen la superficie que Windows sigue componiendo.
+  try {
+    execFileSync('taskkill', ['/PID', String(rec.pid), '/T', '/F'],
+      { timeout: 5000, windowsHide: true, stdio: 'ignore' });
+    console.log(`[CONSOLE] resto de una instancia anterior (PID ${rec.pid}) eliminado`);
+  } catch (err) {
+    console.error(`[CONSOLE] no pude eliminar el PID ${rec.pid}:`, err.message);
+  }
+}
+
+function recordInstance() {
+  try {
+    fs.writeFileSync(instanceRecordPath(),
+      JSON.stringify({ pid: process.pid, version: app.getVersion() }), 'utf8');
+  } catch (err) {
+    console.error('[CONSOLE] no pude registrar el PID de la instancia:', err.message);
+  }
+}
+
+// --- Cache del updater ---
+// electron-updater deja el instalador montado en <cache>/pending para correrlo al salir
+// (autoInstallOnAppQuit). Una vez que la instalación se aplicó eso es peso muerto: ~100 MB
+// y un install pendiente que puede volver a dispararse. Lo borramos sólo si la versión
+// montada es <= la que estamos corriendo; si es MÁS nueva es un update legítimo esperando
+// el próximo quit y no se toca.
+function updaterCacheDirName() {
+  // Fuente de verdad: app-update.yml, que genera electron-builder. Leerlo en vez de
+  // hardcodear el nombre evita que esto deje de limpiar en silencio si cambia.
+  try {
+    const yml = fs.readFileSync(path.join(process.resourcesPath, 'app-update.yml'), 'utf8');
+    const m = yml.match(/^updaterCacheDirName:\s*(.+)$/m);
+    if (m) return m[1].trim();
+  } catch { /* en dev no existe */ }
+  return null;
+}
+
+function compareVersion(a, b) {
+  const pa = a.split('.').map(Number), pb = b.split('.').map(Number);
+  for (let i = 0; i < 3; i++) {
+    const d = (pa[i] || 0) - (pb[i] || 0);
+    if (d) return d;
+  }
+  return 0;
+}
+
+async function cleanStaleUpdaterCache() {
+  if (!app.isPackaged || !process.env.LOCALAPPDATA) return;
+  const dirName = updaterCacheDirName();
+  if (!dirName) return;
+  const pending = path.join(process.env.LOCALAPPDATA, dirName, 'pending');
+
+  let info;
+  try { info = JSON.parse(fs.readFileSync(path.join(pending, 'update-info.json'), 'utf8')); }
+  catch { return; }   // no hay nada montado: el caso normal
+
+  // artifactName es ${productName}-Setup-${version}.${ext} (package.json > build.nsis).
+  const m = String(info.fileName || '').match(/-Setup-(\d+\.\d+\.\d+)\.exe$/i);
+  if (!m) return;                                          // nombre inesperado: no tocamos
+  if (compareVersion(m[1], app.getVersion()) > 0) return;   // update legítimo pendiente
+
+  try {
+    await fs.promises.rm(pending, { recursive: true, force: true });
+    console.log(`[CONSOLE] cache del updater limpiada (v${m[1]} ya está instalada)`);
+  } catch (err) {
+    console.error('[CONSOLE] no pude limpiar la cache del updater:', err.message);
+  }
+}
+
 app.whenReady().then(() => {
+  // La instancia que pierde el lock ya llamó a app.quit() allá arriba, pero quit() es
+  // asíncrono y whenReady llega igual: verificado en vivo, la segunda instancia alcanzaba a
+  // crear ventana, tray, hotkeys y PTYs antes de irse — o sea, fabricaba de más justo los
+  // procesos que este bloque existe para evitar. Y sin este corte killLeftoverInstance
+  // mataría el PID registrado, que es el de la instancia legítima que está corriendo.
+  if (!gotTheLock) return;
+
+  // Si quedó una huérfana de la corrida anterior, que se vaya antes de crear la ventana,
+  // para que no lleguen a convivir en pantalla.
+  killLeftoverInstance();
+  recordInstance();
   createWindow();
   createTray();
   registerHotkeys();
+  // Sin await: no es urgente y puede tardar borrando ~100 MB.
+  cleanStaleUpdaterCache();
   // Chequeo automático al arrancar, sólo en la app empaquetada (en dev usá el comando
   // "Check for updates" de la paleta, que simula el flujo).
   if (app.isPackaged) {
